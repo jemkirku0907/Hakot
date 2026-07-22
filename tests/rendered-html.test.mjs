@@ -19,14 +19,15 @@ test("provides a dedicated resident app route", async () => {
 });
 
 test("includes the responsive photo, wallet, and reward workflows", async () => {
-  const [app, css, page, layout, packageJson] = await Promise.all([
+  const [app, css, page, layout, packageJson, nearby] = await Promise.all([
     readFile(new URL("../app/HakotApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/NearbyJunkshops.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(app, /type MobileView = "home" \| "scan" \| "wallet" \| "rewards" \| "profile"/);
+  assert.match(app, /type MobileView = "home" \| "locations" \| "scan" \| "wallet" \| "rewards" \| "profile"/);
   assert.match(app, /accept="image\/\*"/);
   assert.match(app, /capture="environment"/);
   assert.match(app, /Estimate my points/);
@@ -45,6 +46,11 @@ test("includes the responsive photo, wallet, and reward workflows", async () => 
   assert.match(css, /\.desktop-demo/);
   assert.match(css, /\.mobile-app/);
   assert.match(css, /\.cash-wallet/);
+  assert.match(css, /\.partner-map/);
+  assert.match(nearby, /navigator\.geolocation\.getCurrentPosition/);
+  assert.match(nearby, /tile\.openstreetmap\.org/);
+  assert.match(nearby, /Directions/);
+  assert.match(nearby, /Prototype locations only/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /family=Poppins/);
   assert.doesNotMatch(css, /DM\+Sans|Manrope/);

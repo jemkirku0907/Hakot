@@ -1,8 +1,9 @@
 "use client";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
+import NearbyJunkshops from "./NearbyJunkshops";
 
-type MobileView = "home" | "scan" | "wallet" | "rewards" | "profile";
+type MobileView = "home" | "locations" | "scan" | "wallet" | "rewards" | "profile";
 type MaterialId = "pet" | "cardboard" | "metal" | "glass";
 type Estimate = { material: MaterialId; weight: number; points: number };
 type Transaction = { id: string; label: string; points: number; date: string };
@@ -213,6 +214,7 @@ function ResidentView(props: ResidentProps) {
   const { view, points, transactions, imageUrl, fileName, scanState, material, estimate, onView, onChoose, onMaterial, onAnalyze, onSubmit, onRedeem } = props;
   if (view === "scan") return <MobileScan imageUrl={imageUrl} fileName={fileName} scanState={scanState} material={material} estimate={estimate} onChoose={onChoose} onMaterial={onMaterial} onAnalyze={onAnalyze} onSubmit={onSubmit} />;
   if (view === "wallet") return <MobileWallet points={points} transactions={transactions} />;
+  if (view === "locations") return <NearbyJunkshops />;
   if (view === "rewards") return <MobileRewards points={points} onRedeem={onRedeem} />;
   if (view === "profile") return <MobileProfile />;
   return <div className="cash-home">
@@ -236,7 +238,7 @@ function ResidentView(props: ResidentProps) {
 }
 
 function MobileNav({ view, onView, onScan }: { view: MobileView; onView: (view: MobileView) => void; onScan: () => void }) {
-  return <nav className="bottom-nav"><button className={view === "home" ? "active" : ""} onClick={() => onView("home")}><span>⌂</span>Home</button><button className={view === "wallet" ? "active" : ""} onClick={() => onView("wallet")}><span>▣</span>Wallet</button><button className="scan-tab" onClick={onScan}><span>⌗</span><small>Scan</small></button><button className={view === "rewards" ? "active" : ""} onClick={() => onView("rewards")}><span>◇</span>Rewards</button><button className={view === "profile" ? "active" : ""} onClick={() => onView("profile")}><span>○</span>Profile</button></nav>;
+  return <nav className="bottom-nav"><button className={view === "home" ? "active" : ""} onClick={() => onView("home")}><span>⌂</span>Home</button><button className={view === "locations" ? "active" : ""} onClick={() => onView("locations")}><span>⌖</span>Nearby</button><button className="scan-tab" onClick={onScan}><span>⌗</span><small>Scan</small></button><button className={view === "rewards" ? "active" : ""} onClick={() => onView("rewards")}><span>◇</span>Rewards</button><button className={view === "profile" ? "active" : ""} onClick={() => onView("profile")}><span>○</span>Profile</button></nav>;
 }
 
 function MobileScan({ imageUrl, fileName, scanState, material, estimate, onChoose, onMaterial, onAnalyze, onSubmit }: { imageUrl: string; fileName: string; scanState: string; material: MaterialId; estimate: Estimate | null; onChoose: () => void; onMaterial: (value: MaterialId) => void; onAnalyze: () => void; onSubmit: () => void }) {
