@@ -11,4 +11,4 @@ examples
 worker
 vite.config.ts
 drizzle.config.ts
-hakot-site-*.tar.gz
+*-site-*.tar.gz

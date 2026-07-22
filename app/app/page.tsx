@@ -13,7 +13,7 @@ export default function ResidentAppPage() {
     <main className="app-route-shell">
       <aside className="app-route-copy">
         <a href="/" className="app-route-back">← Back to website</a>
-        <span className="site-kicker">HAKOT resident app</span>
+        <span className="site-kicker">BasuCash resident app</span>
         <h1>Snap. Verify.<br />Earn rewards.</h1>
         <p>Use the working app demo to scan recyclables, check estimated points, view your wallet, and explore rewards.</p>
         <div>
@@ -22,8 +22,8 @@ export default function ResidentAppPage() {
           <span><b>3</b>Verify at pickup</span>
         </div>
       </aside>
-      <section className="app-route-device" aria-label="HAKOT mobile application">
-        <iframe src="/?app=resident" title="HAKOT resident app" allow="camera" />
+      <section className="app-route-device" aria-label="BasuCash mobile application">
+        <iframe src="/?app=resident" title="BasuCash resident app" allow="camera" />
       </section>
       <a href="/" className="app-route-mobile-back">← Website</a>
     </main>

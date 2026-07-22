@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { HakotApp } from "./HakotApp";
 
 export const metadata: Metadata = {
-  title: "HAKOT | Ipunin. Ipa-hakot. Masundan.",
-  description: "Schedule community recycling pickups, track proof, and coordinate routes with verified local partners.",
+  title: "BasuCash | Basura mo, may value.",
+  description: "Snap recyclables, see estimated points, and turn verified pickups into useful local rewards.",
 };
 
 export default function Home() {

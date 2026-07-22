@@ -2,18 +2,18 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://hakot-rewards.vercel.app"),
-  title: { default: "HAKOT", template: "%s | HAKOT" },
+  metadataBase: new URL("https://basucash.vercel.app"),
+  title: { default: "BasuCash", template: "%s | BasuCash" },
   description: "Snap recyclables, earn verified points, and redeem useful local rewards.",
-  applicationName: "HAKOT",
+  applicationName: "BasuCash",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "HAKOT" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "BasuCash" },
   openGraph: {
-    title: "HAKOT — Recyclables into rewards",
+    title: "BasuCash — Recyclables into rewards",
     description: "Take a photo, get a transparent point estimate, and earn verified rewards at pickup.",
-    images: ["/og.png"],
+    images: ["/og-basucash.png"],
   },
-  twitter: { card: "summary_large_image", images: ["/og.png"] },
+  twitter: { card: "summary_large_image", images: ["/og-basucash.png"] },
 };
 
 export const viewport: Viewport = {

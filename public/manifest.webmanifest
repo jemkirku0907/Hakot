@@ -1,7 +1,7 @@
 {
-  "name": "HAKOT - Community Recycling Pickup",
-  "short_name": "HAKOT",
-  "description": "Schedule neighborhood recycling pickups and track collection proof.",
+  "name": "BasuCash - Community Recycling Rewards",
+  "short_name": "BasuCash",
+  "description": "Snap recyclables, earn verified points, and redeem useful local rewards.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f6f4ed",
