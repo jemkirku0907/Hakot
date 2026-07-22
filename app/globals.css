@@ -276,3 +276,26 @@ button { color: inherit; }
   .marketing-site { display: none; }
   .demo-backdrop { display: none; }
 }
+
+/* Dedicated resident app route */
+.app-route-shell { min-height: 100dvh; padding: 42px max(5vw,42px); overflow: hidden; background: radial-gradient(circle at 72% 18%,#1e745e 0,transparent 32%),#0c3027; color: #fff; display: grid; grid-template-columns: minmax(320px,520px) 430px; justify-content: center; align-items: center; gap: clamp(55px,8vw,130px); }
+.app-route-copy { max-width: 520px; }
+.app-route-back { display: inline-flex; margin-bottom: 80px; color: #b8ccc5; text-decoration: none; font-size: 11px; font-weight: 700; }
+.app-route-copy .site-kicker { color: #75c9a9; }
+.app-route-copy h1 { margin: 14px 0 20px; font-family: Manrope,sans-serif; font-size: clamp(55px,5vw,78px); line-height: .94; letter-spacing: -.065em; }
+.app-route-copy > p { max-width: 470px; color: #b2c8c0; font-size: 13px; line-height: 1.7; }
+.app-route-copy > div { margin-top: 35px; display: grid; gap: 11px; }
+.app-route-copy > div span { color: #d0ddd8; font-size: 10px; }
+.app-route-copy > div b { width: 27px; height: 27px; margin-right: 10px; border-radius: 8px; background: rgba(255,255,255,.1); color: #7ad0af; display: inline-grid; place-items: center; }
+.app-route-device { position: relative; width: 430px; height: min(880px,calc(100dvh - 50px)); overflow: hidden; border: 10px solid #071d17; border-radius: 50px; background: #fff; box-shadow: 0 35px 90px rgba(0,0,0,.35); }
+.app-route-device::before { content: ""; position: absolute; z-index: 2; left: 50%; top: 10px; width: 94px; height: 23px; transform: translateX(-50%); border-radius: 99px; background: #071d17; pointer-events: none; }
+.app-route-device iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+.app-route-mobile-back { display: none; }
+
+@media (max-width: 760px) {
+  .app-route-shell { position: relative; display: block; min-height: 100dvh; padding: 0; background: #fff; }
+  .app-route-copy { display: none; }
+  .app-route-device { width: 100%; height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
+  .app-route-device::before { display: none; }
+  .app-route-mobile-back { position: fixed; z-index: 60; left: 12px; top: 69px; display: inline-flex; padding: 7px 9px; border: 1px solid #dce8e3; border-radius: 8px; background: rgba(255,255,255,.92); color: var(--green-dark); text-decoration: none; font-size: 7px; font-weight: 800; backdrop-filter: blur(10px); }
+}

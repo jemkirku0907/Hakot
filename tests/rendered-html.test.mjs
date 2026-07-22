@@ -10,6 +10,14 @@ test("includes production metadata and app manifest", async () => {
   assert.doesNotMatch(layout, /codex-preview|Your site is taking shape/i);
 });
 
+test("provides a dedicated resident app route", async () => {
+  const appRoute = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  const app = await readFile(new URL("../app/HakotApp.tsx", import.meta.url), "utf8");
+  assert.match(appRoute, /HAKOT resident app/);
+  assert.match(appRoute, /iframe src="\/\?app=resident"/);
+  assert.match(app, /window\.location\.href = "\/app"/);
+});
+
 test("includes the responsive photo, wallet, and reward workflows", async () => {
   const [app, css, page, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/HakotApp.tsx", import.meta.url), "utf8"),

@@ -115,7 +115,7 @@ export function HakotApp() {
 
   return (
     <main>
-      <MarketingSite onTry={() => setDemoOpen(true)} onScan={() => fileRef.current?.click()} />
+      <MarketingSite onTry={() => { window.location.href = "/app"; }} onScan={() => fileRef.current?.click()} />
 
       <section className="mobile-app" aria-label="HAKOT resident mobile app">
         <header className="mobile-header"><Logo /><button className="avatar-button" onClick={() => setView("profile")}>MS</button></header>
