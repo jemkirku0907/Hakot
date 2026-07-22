@@ -1,0 +1,14 @@
+.env
+.env.*
+.openai
+.wrangler
+.vinext
+dist
+build
+db
+drizzle
+examples
+worker
+vite.config.ts
+drizzle.config.ts
+hakot-site-*.tar.gz

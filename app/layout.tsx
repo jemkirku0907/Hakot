@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://hakot-community-pickup.jemkirku0907.chatgpt.site"),
+  metadataBase: new URL("https://hakot-rewards.vercel.app"),
   title: { default: "HAKOT", template: "%s | HAKOT" },
   description: "Snap recyclables, earn verified points, and redeem useful local rewards.",
   applicationName: "HAKOT",
