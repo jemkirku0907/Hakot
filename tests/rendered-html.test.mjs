@@ -42,6 +42,8 @@ test("includes the responsive photo, wallet, and reward workflows", async () => 
   assert.match(css, /\.desktop-demo/);
   assert.match(css, /\.mobile-app/);
   assert.match(css, /prefers-reduced-motion/);
+  assert.match(css, /family=Poppins/);
+  assert.doesNotMatch(css, /DM\+Sans|Manrope/);
   assert.doesNotMatch(page, /SkeletonPreview|codex-preview/);
   assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
