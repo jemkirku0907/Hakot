@@ -36,10 +36,15 @@ test("includes the responsive photo, wallet, and reward workflows", async () => 
   assert.match(app, /capture="environment"/);
   assert.match(app, /Estimate my points/);
   assert.match(app, /10 points = ₱1 reward value/);
+  assert.match(app, /Your trash/);
+  assert.match(app, /Try the live demo/);
+  assert.match(app, /How HAKOT works/);
   assert.match(app, /localStorage\.setItem\("hakot-wallet-v2"/);
   assert.match(app, /serviceWorker\.register\("\/sw\.js"/);
   assert.match(css, /@media \(max-width: 760px\)/);
-  assert.match(css, /\.desktop-shell/);
+  assert.match(css, /\.marketing-site/);
+  assert.match(css, /\.site-hero/);
+  assert.match(css, /\.desktop-demo/);
   assert.match(css, /\.mobile-app/);
   assert.match(css, /prefers-reduced-motion/);
   assert.doesNotMatch(page, /SkeletonPreview|codex-preview/);

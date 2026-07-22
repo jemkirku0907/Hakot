@@ -30,8 +30,8 @@ function Mark({ children, tone = "" }: { children: React.ReactNode; tone?: strin
   return <span className={`mark ${tone}`} aria-hidden="true">{children}</span>;
 }
 
-function Logo({ compact = false }: { compact?: boolean }) {
-  return <span className="logo"><span className="logo-mark">H</span>{!compact && <strong>HAKOT</strong>}</span>;
+function Logo({ light = false }: { light?: boolean }) {
+  return <span className={`logo ${light ? "light" : ""}`}><span className="logo-mark">H</span><strong>HAKOT</strong></span>;
 }
 
 function PesoValue({ points }: { points: number }) {
@@ -49,6 +49,7 @@ export function HakotApp() {
   const [scanState, setScanState] = useState<"empty" | "ready" | "analyzing" | "done">("empty");
   const [toast, setToast] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export function HakotApp() {
       try {
         const parsed = JSON.parse(saved) as { points: number; transactions: Transaction[] };
         queueMicrotask(() => { setPoints(parsed.points); setTransactions(parsed.transactions); });
-      } catch { /* keep demo defaults */ }
+      } catch { /* keep safe demo defaults */ }
     }
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => undefined);
   }, []);
@@ -74,7 +75,6 @@ export function HakotApp() {
 
   useEffect(() => () => { if (imageUrl.startsWith("blob:")) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
 
-  const monthBars = [42, 58, 44, 72, 63, 88, 70];
   function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -90,8 +90,7 @@ export function HakotApp() {
   function analyzePhoto() {
     setScanState("analyzing");
     window.setTimeout(() => {
-      const base = Math.max(1.2, Math.min(6.8, ((fileName.length * 17) % 48) / 10 + 1.5));
-      const weight = Number(base.toFixed(1));
+      const weight = Number(Math.max(1.2, Math.min(6.8, ((fileName.length * 17) % 48) / 10 + 1.5)).toFixed(1));
       setEstimate({ material, weight, points: Math.round(weight * materials[material].rate) });
       setScanState("done");
     }, 900);
@@ -110,135 +109,44 @@ export function HakotApp() {
       return;
     }
     setPoints((value) => value - reward.price);
-    setTransactions((items) => [{
-      id: String(Date.now()),
-      label: `${reward.title} redeemed`,
-      points: -reward.price,
-      date: "Today",
-    }, ...items]);
+    setTransactions((items) => [{ id: String(Date.now()), label: `${reward.title} redeemed`, points: -reward.price, date: "Today" }, ...items]);
     setToast(`${reward.title} added to your vouchers.`);
   }
 
   return (
     <main>
-      <section className="desktop-shell" aria-label="HAKOT operations dashboard">
-        <DesktopSidebar />
-        <div className="desktop-main">
-          <DesktopTopbar />
-          <div className="desktop-page">
-            <div className="desktop-heading">
-              <div><span className="eyebrow">Overview / Quezon City pilot</span><h1>Good morning, Bea.</h1><p>Here is today&apos;s collection and rewards activity.</p></div>
-              <button className="primary-button" onClick={() => { setScanOpen(true); setView("scan"); }}>Review scan <span>→</span></button>
-            </div>
-
-            <div className="metric-grid">
-              <Metric label="Pending reviews" value="12" delta="+3 today" mark="S" tone="mint" />
-              <Metric label="Scheduled pickups" value="28" delta="4 routes" mark="T" tone="sky" />
-              <Metric label="Points issued" value="8,420" delta="+18.6%" mark="P" tone="lime" />
-              <Metric label="Wallet value" value="₱842" delta="This month" mark="₱" tone="sand" />
-            </div>
-
-            <div className="dashboard-grid">
-              <section className="card chart-card">
-                <CardHead title="Collection performance" meta="Last 7 days" />
-                <div className="chart-summary"><strong>486.8 <small>kg</small></strong><span>↗ 18.6% from last week</span></div>
-                <div className="bar-chart" aria-label="Daily collection chart">
-                  {monthBars.map((height, index) => <div key={index}><span style={{ height: `${height}%` }} /><small>{["M","T","W","T","F","S","S"][index]}</small></div>)}
-                </div>
-              </section>
-
-              <section className="card review-card">
-                <CardHead title="Scan reviews" meta="View all" />
-                <div className="review-hero">
-                  <div className="scan-illustration"><span>⌗</span><i /></div>
-                  <div><span className="status-dot pending" />Needs verification<h2>PET bottles</h2><p>Estimated 3.6 kg · 162 pts</p><button onClick={() => setScanOpen(true)}>Review photo</button></div>
-                </div>
-                <div className="mini-review"><Mark tone="sand">C</Mark><span><strong>Cardboard bundle</strong><small>2.8 kg · 70 pts</small></span><b>Ready</b></div>
-              </section>
-
-              <section className="card mix-card">
-                <CardHead title="Material mix" meta="This month" />
-                <div className="donut"><div><strong>1.2t</strong><small>collected</small></div></div>
-                <ul><li><i className="pet" />PET <b>42%</b></li><li><i className="cardboard" />Cardboard <b>31%</b></li><li><i className="metal" />Metal <b>18%</b></li><li><i className="other" />Other <b>9%</b></li></ul>
-              </section>
-
-              <section className="card activity-card">
-                <CardHead title="Recent activity" meta="Today" />
-                <div className="activity-table">
-                  <div className="table-head"><span>Member</span><span>Material</span><span>Verified</span><span>Points</span><span>Status</span></div>
-                  {[
-                    ["Mia Santos","PET bottles","4.1 kg","+185","Credited"],
-                    ["Carlo Reyes","Cardboard","3.8 kg","+95","Credited"],
-                    ["Joy Lim","Aluminum","1.6 kg","+112","For review"],
-                    ["Anna Cruz","Glass","5.2 kg","+156","Scheduled"],
-                  ].map((row) => <div className="table-row" key={row[0]}><span><i>{row[0].split(" ").map(n => n[0]).join("")}</i><b>{row[0]}</b></span><span>{row[1]}</span><span>{row[2]}</span><strong>{row[3]}</strong><em className={row[4].toLowerCase().replace(" ","-")}>{row[4]}</em></div>)}
-                </div>
-              </section>
-
-              <section className="card rewards-card">
-                <CardHead title="Popular rewards" meta="Manage" />
-                {rewards.slice(0, 2).map((reward) => <div className="reward-row" key={reward.id}><Mark tone="mint">{reward.icon}</Mark><span><strong>{reward.title}</strong><small>{reward.meta}</small></span><b>{reward.price} pts</b></div>)}
-              </section>
-            </div>
-          </div>
-        </div>
-      </section>
+      <MarketingSite onTry={() => setDemoOpen(true)} onScan={() => fileRef.current?.click()} />
 
       <section className="mobile-app" aria-label="HAKOT resident mobile app">
-        <header className="mobile-header">
-          <Logo />
-          <button className="avatar-button" onClick={() => setView("profile")}>MS</button>
-        </header>
-
+        <header className="mobile-header"><Logo /><button className="avatar-button" onClick={() => setView("profile")}>MS</button></header>
         <div className="mobile-scroll">
-          {view === "home" && (
-            <>
-              <div className="mobile-greeting"><span>Magandang umaga, Mia!</span><h1>Turn your recyclables<br />into rewards.</h1></div>
-              <section className="wallet-hero">
-                <span>Available balance</span><strong>{points.toLocaleString()} <small>points</small></strong><p><PesoValue points={points} /> redeemable value</p>
-                <button onClick={() => setView("wallet")}>View wallet <span>→</span></button>
-                <div className="wallet-orbit one" /><div className="wallet-orbit two" />
-              </section>
-              <button className="scan-cta" onClick={() => fileRef.current?.click()}>
-                <span className="camera-mark">⌗</span><span><strong>Scan your recyclables</strong><small>Take a photo to estimate your points</small></span><b>→</b>
-              </button>
-              <section className="mobile-section">
-                <div className="section-title"><h2>How it works</h2></div>
-                <div className="how-grid"><div><Mark tone="mint">1</Mark><strong>Snap</strong><small>Take a clear photo</small></div><div><Mark tone="sky">2</Mark><strong>Verify</strong><small>We weigh at pickup</small></div><div><Mark tone="sand">3</Mark><strong>Redeem</strong><small>Use your points</small></div></div>
-              </section>
-              <section className="mobile-section">
-                <div className="section-title"><h2>Next pickup</h2><button>See details</button></div>
-                <article className="pickup-card"><div className="date-block"><b>26</b><span>JUL</span></div><div><strong>Community pickup</strong><p>Palm Grove · Lobby B</p><small>8:00 – 11:00 AM</small></div><em>Confirmed</em></article>
-              </section>
-            </>
-          )}
-
-          {view === "scan" && <MobileScan imageUrl={imageUrl} fileName={fileName} scanState={scanState} material={material} estimate={estimate} onChoose={() => fileRef.current?.click()} onMaterial={setMaterial} onAnalyze={analyzePhoto} onSubmit={submitEstimate} />}
-          {view === "wallet" && <MobileWallet points={points} transactions={transactions} />}
-          {view === "rewards" && <MobileRewards points={points} onRedeem={redeem} />}
-          {view === "profile" && <MobileProfile />}
+          <ResidentView view={view} points={points} transactions={transactions} imageUrl={imageUrl} fileName={fileName} scanState={scanState} material={material} estimate={estimate} onView={setView} onChoose={() => fileRef.current?.click()} onMaterial={setMaterial} onAnalyze={analyzePhoto} onSubmit={submitEstimate} onRedeem={redeem} />
         </div>
-
-        <nav className="bottom-nav">
-          <button className={view === "home" ? "active" : ""} onClick={() => setView("home")}><span>⌂</span>Home</button>
-          <button className={view === "wallet" ? "active" : ""} onClick={() => setView("wallet")}><span>▣</span>Wallet</button>
-          <button className="scan-tab" onClick={() => fileRef.current?.click()}><span>⌗</span><small>Scan</small></button>
-          <button className={view === "rewards" ? "active" : ""} onClick={() => setView("rewards")}><span>◇</span>Rewards</button>
-          <button className={view === "profile" ? "active" : ""} onClick={() => setView("profile")}><span>○</span>Profile</button>
-        </nav>
+        <MobileNav view={view} onView={setView} onScan={() => fileRef.current?.click()} />
       </section>
 
       <input ref={fileRef} className="sr-only" type="file" accept="image/*" capture="environment" onChange={choosePhoto} />
+
+      {demoOpen && (
+        <div className="demo-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDemoOpen(false)}>
+          <section className="desktop-demo" role="dialog" aria-modal="true" aria-label="HAKOT live app demo">
+            <div className="demo-copy"><Logo light /><span className="site-kicker">Interactive preview</span><h2>Try the resident app.</h2><p>Explore the wallet and rewards, or upload a sample photo to see the estimate flow.</p><ul><li><span>1</span>Snap sorted recyclables</li><li><span>2</span>See estimated points</li><li><span>3</span>Verify at pickup and redeem</li></ul><button onClick={() => setDemoOpen(false)}>Close demo</button></div>
+            <div className="demo-device">
+              <div className="demo-status"><span>9:41</span><b>HAKOT</b><span>● ●</span></div>
+              <div className="demo-screen"><ResidentView view={view} points={points} transactions={transactions} imageUrl={imageUrl} fileName={fileName} scanState={scanState} material={material} estimate={estimate} onView={setView} onChoose={() => fileRef.current?.click()} onMaterial={setMaterial} onAnalyze={analyzePhoto} onSubmit={submitEstimate} onRedeem={redeem} /></div>
+              <MobileNav view={view} onView={setView} onScan={() => fileRef.current?.click()} />
+            </div>
+            <button className="demo-close" aria-label="Close app demo" onClick={() => setDemoOpen(false)}>×</button>
+          </section>
+        </div>
+      )}
 
       {scanOpen && (
         <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setScanOpen(false)}>
           <section className="scan-modal" role="dialog" aria-modal="true" aria-labelledby="scan-review-title">
             <div className="modal-head"><div><span className="eyebrow">Photo estimate</span><h2 id="scan-review-title">Review recyclable scan</h2></div><button onClick={() => setScanOpen(false)}>×</button></div>
             {imageUrl ? <img src={imageUrl} alt="Selected recyclables" className="modal-photo" /> : <div className="modal-placeholder"><span>⌗</span><strong>No photo selected</strong><button onClick={() => fileRef.current?.click()}>Choose photo</button></div>}
-            <div className="modal-fields">
-              <label>Material<select value={material} onChange={(event) => { setMaterial(event.target.value as MaterialId); setEstimate(null); setScanState("ready"); }}>{Object.entries(materials).map(([id, item]) => <option key={id} value={id}>{item.label}</option>)}</select></label>
-              <div><span>Estimate status</span><strong>{estimate ? `${estimate.weight} kg · ${estimate.points} pts` : "Waiting for photo"}</strong></div>
-            </div>
+            <div className="modal-fields"><label>Material<select value={material} onChange={(event) => { setMaterial(event.target.value as MaterialId); setEstimate(null); setScanState("ready"); }}>{Object.entries(materials).map(([id, item]) => <option key={id} value={id}>{item.label}</option>)}</select></label><div><span>Estimate status</span><strong>{estimate ? `${estimate.weight} kg · ${estimate.points} pts` : "Waiting for photo"}</strong></div></div>
             <p className="verification-note">Photo results are estimates. Final weight and points are confirmed by a collector at pickup.</p>
             <div className="modal-actions">{estimate ? <button className="primary-button" onClick={submitEstimate}>Add to pickup</button> : <button className="primary-button" disabled={!imageUrl || scanState === "analyzing"} onClick={analyzePhoto}>{scanState === "analyzing" ? "Estimating…" : "Estimate points"}</button>}</div>
           </section>
@@ -250,32 +158,73 @@ export function HakotApp() {
   );
 }
 
-function DesktopSidebar() {
-  const nav = [["▦","Overview"],["⌗","Scan reviews"],["T","Pickups"],["○","Members"],["▣","Wallet & rewards"],["◇","Partners"],["↗","Analytics"]];
-  return <aside className="desktop-sidebar"><Logo /><nav>{nav.map(([icon,label], index) => <button key={label} className={index === 0 ? "active" : ""}><span>{icon}</span>{label}{label === "Scan reviews" && <b>12</b>}</button>)}</nav><div className="sidebar-card"><Mark tone="mint">♻</Mark><strong>1,248 kg</strong><p>kept out of landfill this month</p><span><i style={{ width: "72%" }} /></span></div><div className="user-card"><span>BL</span><div><strong>Bea Lim</strong><small>Operations admin</small></div><b>•••</b></div></aside>;
+function MarketingSite({ onTry, onScan }: { onTry: () => void; onScan: () => void }) {
+  return <section className="marketing-site">
+    <header className="site-nav"><a href="#top" aria-label="HAKOT home"><Logo /></a><nav><a href="#how">How it works</a><a href="#features">Features</a><a href="#rewards">Rewards</a><a href="#community">For communities</a></nav><div><button className="nav-ghost" onClick={onTry}>See the app</button><a className="nav-solid" href="#pilot">Join the pilot</a></div></header>
+
+    <section className="site-hero" id="top">
+      <div className="hero-copy"><span className="site-pill"><i />Community recycling, rewarded</span><h1>Your trash<br />has <em>value.</em></h1><p>Snap your sorted recyclables, get a clear point estimate, and turn verified pickups into rewards you can actually use.</p><div className="hero-actions"><button className="hero-primary" onClick={onTry}>Try the live demo <span>→</span></button><button className="hero-secondary" onClick={onScan}><span>⌗</span> Test a photo</button></div><small>No payment needed · Demo points only</small></div>
+      <HeroPhones />
+      <div className="hero-float float-one"><Mark tone="mint">✓</Mark><span><strong>Pickup verified</strong><small>+185 points earned</small></span></div>
+      <div className="hero-float float-two"><span>₱</span><strong>1,280 pts</strong><small>₱128 reward value</small></div>
+    </section>
+
+    <div className="trust-strip"><span>Designed for everyday recycling</span><div><b>♻</b>Clear material rates</div><div><b>⌗</b>Photo-first estimates</div><div><b>✓</b>Verified at pickup</div><div><b>₱</b>Useful local rewards</div></div>
+
+    <section className="story-section" id="how">
+      <div className="section-copy"><span className="site-kicker">Simple by design</span><h2>One photo.<br />A clearer reward.</h2><p>HAKOT makes the value of recyclable waste understandable before collection—then confirms the final points after weighing.</p><button onClick={onTry}>Walk through the app <span>→</span></button></div>
+      <div className="story-stage"><div className="scan-demo-card"><div className="scan-demo-top"><span>Photo estimate</span><b>•••</b></div><div className="scan-photo-art"><span className="bottle one" /><span className="bottle two" /><span className="can" /><i>Scanning material…</i></div><div className="scan-result"><Mark tone="mint">P</Mark><span><small>Detected material</small><strong>PET bottles</strong></span><b>92%</b></div><div className="estimate-demo"><span><small>Est. weight</small><strong>4.1 kg</strong></span><span><small>Est. points</small><strong>185 pts</strong></span><span><small>Reward value</small><strong>₱18.50</strong></span></div></div></div>
+    </section>
+
+    <section className="feature-section" id="features"><div className="section-heading"><span className="site-kicker">Everything in one loop</span><h2>From kalat to useful value.</h2><p>Built around the few actions residents and collection teams actually need.</p></div><div className="bento-grid">
+      <article className="bento scan-bento"><div><span className="number">01</span><h3>Scan before pickup</h3><p>Take a clear photo and choose the material. HAKOT shows an estimated weight, points, and peso reward value.</p></div><div className="focus-frame"><span>⌗</span><i /><b>Ready to scan</b></div></article>
+      <article className="bento wallet-bento"><span className="number">02</span><h3>A wallet that makes sense</h3><p>See confirmed points, conversion value, and every earned or redeemed transaction.</p><div className="mini-wallet"><small>Available balance</small><strong>1,280 <em>pts</em></strong><span>≈ ₱128 reward value</span></div></article>
+      <article className="bento proof-bento"><span className="number">03</span><h3>No mystery points</h3><p>Rates stay visible. Estimates are clearly labeled and final credit only happens after weighing.</p><div className="rate-list"><span>PET bottles <b>45 pts/kg</b></span><span>Cardboard <b>25 pts/kg</b></span><span>Aluminum <b>70 pts/kg</b></span></div></article>
+      <article className="bento pickup-bento"><span className="number">04</span><h3>Neighborhood pickups</h3><p>Combine nearby requests into practical community collection schedules.</p><div className="pickup-preview"><b>26</b><span><strong>Community pickup</strong><small>Palm Grove · Lobby B</small></span><em>Confirmed</em></div></article>
+    </div></section>
+
+    <section className="steps-section"><div className="section-heading"><span className="site-kicker">How HAKOT works</span><h2>Four small steps. One cleaner habit.</h2></div><div className="steps-row">{[["01","Snap","Photograph clean, sorted recyclables."],["02","Estimate","See the material rate and likely points."],["03","Verify","A collector weighs and confirms the pickup."],["04","Redeem","Use verified points on available rewards."]].map(([n,title,copy]) => <article key={n}><span>{n}</span><Mark tone={n === "02" ? "sand" : n === "03" ? "sky" : "mint"}>{n === "01" ? "⌗" : n === "02" ? "P" : n === "03" ? "✓" : "₱"}</Mark><h3>{title}</h3><p>{copy}</p></article>)}</div></section>
+
+    <section className="rewards-showcase" id="rewards"><div className="reward-copy"><span className="site-kicker">Rewards with real use</span><h2>Earn points.<br />Choose what helps.</h2><p>Redeem verified points for mobile load, grocery vouchers, reusable products, and future local partner offers.</p><button onClick={onTry}>Explore rewards <span>→</span></button></div><div className="reward-stack">{rewards.map((reward, index) => <article key={reward.id} className={`reward-ticket ticket-${index + 1}`}><div><Mark tone={index === 1 ? "sand" : index === 2 ? "sky" : "mint"}>{reward.icon}</Mark><span><small>{reward.meta}</small><strong>{reward.title}</strong></span></div><b>{reward.value}</b><footer><span>{reward.price} points</span><em>Redeem →</em></footer></article>)}</div></section>
+
+    <section className="community-section" id="community"><div className="community-copy"><span className="site-kicker">Made for local systems</span><h2>One simple loop for residents, collectors, and communities.</h2><p>HAKOT can help condos, barangays, schools, and recycling partners coordinate collection while keeping rewards understandable.</p></div><div className="audience-grid"><article><span>01</span><h3>Residents</h3><p>Easy photo estimates, pickup status, wallet, and rewards.</p></article><article><span>02</span><h3>Collectors</h3><p>Grouped stops, material details, and verification records.</p></article><article><span>03</span><h3>Communities</h3><p>Participation, diversion, and reward activity in one view.</p></article></div></section>
+
+    <section className="faq-section"><div><span className="site-kicker">Questions, answered</span><h2>Good to know.</h2></div><div className="faq-list"><details open><summary>Are photo points final?<span>+</span></summary><p>No. The photo gives a helpful estimate. Final points are confirmed only after the collector inspects and weighs the accepted materials.</p></details><details><summary>Can points be withdrawn as cash?<span>+</span></summary><p>Not in this prototype. Ten points equal ₱1 of reward value for eligible offers inside the HAKOT marketplace.</p></details><details><summary>What materials can I submit?<span>+</span></summary><p>The pilot supports PET bottles, cardboard, selected metal, and glass. Availability can change by collection partner.</p></details></div></section>
+
+    <section className="final-cta" id="pilot"><span className="site-kicker">Ready for a cleaner loop?</span><h2>Snap it. Verify it.<br />Make it count.</h2><p>Explore the working HAKOT prototype and see how recycling can feel more rewarding.</p><button onClick={onTry}>Open the app demo <span>→</span></button><div className="cta-orbit one" /><div className="cta-orbit two" /></section>
+    <footer className="site-footer"><Logo /><p>A community recycling rewards prototype built for the Philippines.</p><nav><a href="#how">How it works</a><a href="#features">Features</a><a href="#rewards">Rewards</a><a href="#top">Back to top ↑</a></nav><small>© 2026 HAKOT. Prototype offers and values are for demonstration.</small></footer>
+  </section>;
 }
 
-function DesktopTopbar() {
-  return <header className="desktop-topbar"><div className="search"><span>⌕</span><input aria-label="Search dashboard" placeholder="Search members, scans, pickups…" /></div><div className="top-actions"><button>?</button><button>◌<i /></button><div className="top-profile"><span>BL</span><div><strong>Bea Lim</strong><small>Administrator</small></div><b>⌄</b></div></div></header>;
+function HeroPhones() {
+  return <div className="hero-visual" aria-label="HAKOT app screens preview">
+    <div className="phone side-phone left-phone"><div className="phone-top">9:41 <b>HAKOT</b> ●</div><div className="tiny-heading"><span>Your balance</span><h3>Wallet</h3></div><div className="tiny-wallet"><small>Available</small><strong>1,280 pts</strong><span>₱128.00 value</span></div><div className="tiny-list"><b>Transactions</b><span><i>+</i>PET pickup <em>+185</em></span><span><i>−</i>Mobile load <em>−200</em></span></div></div>
+    <div className="phone main-phone"><div className="phone-top">9:41 <b>HAKOT</b> ●</div><div className="tiny-greeting"><span>Magandang umaga, Mia!</span><h3>Turn recyclables<br />into rewards.</h3></div><div className="tiny-wallet hero"><small>Available balance</small><strong>1,280 <em>points</em></strong><span>₱128 redeemable value</span></div><div className="tiny-scan"><Mark tone="mint">⌗</Mark><span><strong>Scan recyclables</strong><small>Estimate your points</small></span><b>→</b></div><div className="tiny-how"><strong>How it works</strong><div><span>1<small>Snap</small></span><span>2<small>Verify</small></span><span>3<small>Redeem</small></span></div></div></div>
+    <div className="phone side-phone right-phone"><div className="phone-top">9:41 <b>HAKOT</b> ●</div><div className="tiny-heading"><span>Use your points</span><h3>Rewards</h3></div><div className="tiny-reward"><b>₱20</b><span>Mobile load</span><small>200 pts</small></div><div className="tiny-reward grocery"><b>₱50</b><span>Grocery voucher</span><small>500 pts</small></div></div>
+  </div>;
 }
 
-function Metric({ label, value, delta, mark, tone }: { label: string; value: string; delta: string; mark: string; tone: string }) {
-  return <div className="metric-card"><Mark tone={tone}>{mark}</Mark><div><span>{label}</span><strong>{value}</strong><small>{delta}</small></div><b>↗</b></div>;
+type ResidentProps = {
+  view: MobileView; points: number; transactions: Transaction[]; imageUrl: string; fileName: string; scanState: string; material: MaterialId; estimate: Estimate | null;
+  onView: (view: MobileView) => void; onChoose: () => void; onMaterial: (id: MaterialId) => void; onAnalyze: () => void; onSubmit: () => void; onRedeem: (reward: (typeof rewards)[number]) => void;
+};
+
+function ResidentView(props: ResidentProps) {
+  const { view, points, transactions, imageUrl, fileName, scanState, material, estimate, onView, onChoose, onMaterial, onAnalyze, onSubmit, onRedeem } = props;
+  if (view === "scan") return <MobileScan imageUrl={imageUrl} fileName={fileName} scanState={scanState} material={material} estimate={estimate} onChoose={onChoose} onMaterial={onMaterial} onAnalyze={onAnalyze} onSubmit={onSubmit} />;
+  if (view === "wallet") return <MobileWallet points={points} transactions={transactions} />;
+  if (view === "rewards") return <MobileRewards points={points} onRedeem={onRedeem} />;
+  if (view === "profile") return <MobileProfile />;
+  return <><div className="mobile-greeting"><span>Magandang umaga, Mia!</span><h1>Turn your recyclables<br />into rewards.</h1></div><section className="wallet-hero"><span>Available balance</span><strong>{points.toLocaleString()} <small>points</small></strong><p><PesoValue points={points} /> redeemable value</p><button onClick={() => onView("wallet")}>View wallet <span>→</span></button><div className="wallet-orbit one" /><div className="wallet-orbit two" /></section><button className="scan-cta" onClick={onChoose}><span className="camera-mark">⌗</span><span><strong>Scan your recyclables</strong><small>Take a photo to estimate your points</small></span><b>→</b></button><section className="mobile-section"><div className="section-title"><h2>How it works</h2></div><div className="how-grid"><div><Mark tone="mint">1</Mark><strong>Snap</strong><small>Take a clear photo</small></div><div><Mark tone="sky">2</Mark><strong>Verify</strong><small>We weigh at pickup</small></div><div><Mark tone="sand">3</Mark><strong>Redeem</strong><small>Use your points</small></div></div></section><section className="mobile-section"><div className="section-title"><h2>Next pickup</h2><button>See details</button></div><article className="pickup-card"><div className="date-block"><b>26</b><span>JUL</span></div><div><strong>Community pickup</strong><p>Palm Grove · Lobby B</p><small>8:00 – 11:00 AM</small></div><em>Confirmed</em></article></section></>;
 }
 
-function CardHead({ title, meta }: { title: string; meta: string }) {
-  return <div className="card-head"><h2>{title}</h2><button>{meta} <span>⌄</span></button></div>;
+function MobileNav({ view, onView, onScan }: { view: MobileView; onView: (view: MobileView) => void; onScan: () => void }) {
+  return <nav className="bottom-nav"><button className={view === "home" ? "active" : ""} onClick={() => onView("home")}><span>⌂</span>Home</button><button className={view === "wallet" ? "active" : ""} onClick={() => onView("wallet")}><span>▣</span>Wallet</button><button className="scan-tab" onClick={onScan}><span>⌗</span><small>Scan</small></button><button className={view === "rewards" ? "active" : ""} onClick={() => onView("rewards")}><span>◇</span>Rewards</button><button className={view === "profile" ? "active" : ""} onClick={() => onView("profile")}><span>○</span>Profile</button></nav>;
 }
 
 function MobileScan({ imageUrl, fileName, scanState, material, estimate, onChoose, onMaterial, onAnalyze, onSubmit }: { imageUrl: string; fileName: string; scanState: string; material: MaterialId; estimate: Estimate | null; onChoose: () => void; onMaterial: (value: MaterialId) => void; onAnalyze: () => void; onSubmit: () => void }) {
   const info = estimate ? materials[estimate.material] : materials[material];
-  return <div className="mobile-page scan-page"><div className="mobile-page-head"><span>Photo estimate</span><h1>Scan recyclables</h1><p>Take one clear photo of sorted, clean materials.</p></div>
-    <button className={`photo-zone ${imageUrl ? "has-photo" : ""}`} onClick={onChoose}>{imageUrl ? <img src={imageUrl} alt="Your selected recyclables" /> : <><span>⌗</span><strong>Open camera</strong><small>or choose from your gallery</small></>} {imageUrl && <em>Change photo</em>}</button>
-    {fileName && <small className="file-name">{fileName}</small>}
-    <section className="material-picker"><h2>What is in the photo?</h2><div>{(Object.entries(materials) as [MaterialId, typeof materials.pet][]).map(([id,item]) => <button key={id} className={material === id ? "active" : ""} onClick={() => onMaterial(id)}><Mark tone={item.color}>{item.mark}</Mark>{item.label}</button>)}</div></section>
-    {estimate && <section className="estimate-card"><div className="estimate-title"><Mark tone="mint">✓</Mark><span><strong>Estimated value</strong><small>Pending pickup verification</small></span></div><div className="estimate-values"><div><span>Material</span><strong>{info.label}</strong></div><div><span>Est. weight</span><strong>{estimate.weight} kg</strong></div><div><span>Est. points</span><strong>{estimate.points} pts</strong></div><div><span>PHP value</span><strong><PesoValue points={estimate.points} /></strong></div></div><p>Rate: {info.rate} points/kg. Final points may change after weighing.</p></section>}
-    {estimate ? <button className="mobile-primary" onClick={onSubmit}>Add to pickup request</button> : <button className="mobile-primary" disabled={!imageUrl || scanState === "analyzing"} onClick={onAnalyze}>{scanState === "analyzing" ? "Checking photo…" : "Estimate my points"}</button>}
-  </div>;
+  return <div className="mobile-page scan-page"><div className="mobile-page-head"><span>Photo estimate</span><h1>Scan recyclables</h1><p>Take one clear photo of sorted, clean materials.</p></div><button className={`photo-zone ${imageUrl ? "has-photo" : ""}`} onClick={onChoose}>{imageUrl ? <img src={imageUrl} alt="Your selected recyclables" /> : <><span>⌗</span><strong>Open camera</strong><small>or choose from your gallery</small></>} {imageUrl && <em>Change photo</em>}</button>{fileName && <small className="file-name">{fileName}</small>}<section className="material-picker"><h2>What is in the photo?</h2><div>{(Object.entries(materials) as [MaterialId, typeof materials.pet][]).map(([id,item]) => <button key={id} className={material === id ? "active" : ""} onClick={() => onMaterial(id)}><Mark tone={item.color}>{item.mark}</Mark>{item.label}</button>)}</div></section>{estimate && <section className="estimate-card"><div className="estimate-title"><Mark tone="mint">✓</Mark><span><strong>Estimated value</strong><small>Pending pickup verification</small></span></div><div className="estimate-values"><div><span>Material</span><strong>{info.label}</strong></div><div><span>Est. weight</span><strong>{estimate.weight} kg</strong></div><div><span>Est. points</span><strong>{estimate.points} pts</strong></div><div><span>PHP value</span><strong><PesoValue points={estimate.points} /></strong></div></div><p>Rate: {info.rate} points/kg. Final points may change after weighing.</p></section>}{estimate ? <button className="mobile-primary" onClick={onSubmit}>Add to pickup request</button> : <button className="mobile-primary" disabled={!imageUrl || scanState === "analyzing"} onClick={onAnalyze}>{scanState === "analyzing" ? "Checking photo…" : "Estimate my points"}</button>}</div>;
 }
 
 function MobileWallet({ points, transactions }: { points: number; transactions: Transaction[] }) {
