@@ -3,14 +3,20 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "HAKOT", template: "%s | HAKOT" },
-  description: "Neighborhood collection logistics for recyclables and difficult waste.",
+  description: "Snap recyclables, earn verified points, and redeem useful local rewards.",
   applicationName: "HAKOT",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "HAKOT" },
+  openGraph: {
+    title: "HAKOT — Recyclables into rewards",
+    description: "Take a photo, get a transparent point estimate, and earn verified rewards at pickup.",
+    images: ["/hakot-social.png"],
+  },
+  twitter: { card: "summary_large_image", images: ["/hakot-social.png"] },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#12372a",
+  themeColor: "#17aa82",
   width: "device-width",
   initialScale: 1,
 };

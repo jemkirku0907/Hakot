@@ -1,432 +1,291 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 
-type Role = "resident" | "collector" | "operations";
-type ResidentView = "home" | "pickups" | "impact";
-type MaterialId = "cardboard" | "pet" | "metal" | "ewaste";
-type PickupStatus = "Confirmed" | "Assigned" | "Collected" | "Needs review";
+type MobileView = "home" | "scan" | "wallet" | "rewards" | "profile";
+type MaterialId = "pet" | "cardboard" | "metal" | "glass";
+type Estimate = { material: MaterialId; weight: number; points: number };
+type Transaction = { id: string; label: string; points: number; date: string };
 
-type Pickup = {
-  id: string;
-  material: MaterialId;
-  label: string;
-  quantity: string;
-  date: string;
-  window: string;
-  location: string;
-  status: PickupStatus;
-  weight?: string;
-  payout?: string;
+const materials: Record<MaterialId, { label: string; rate: number; mark: string; color: string }> = {
+  pet: { label: "PET bottles", rate: 45, mark: "P", color: "aqua" },
+  cardboard: { label: "Cardboard", rate: 25, mark: "C", color: "sand" },
+  metal: { label: "Aluminum cans", rate: 70, mark: "M", color: "blue" },
+  glass: { label: "Glass bottles", rate: 30, mark: "G", color: "lilac" },
 };
 
-const materials: Array<{
-  id: MaterialId;
-  icon: string;
-  label: string;
-  rate: string;
-  note: string;
-  accent: string;
-}> = [
-  { id: "cardboard", icon: "▤", label: "Cardboard", rate: "₱4–7 / kg", note: "Dry and bundled", accent: "sand" },
-  { id: "pet", icon: "♻", label: "PET bottles", rate: "₱12–18 / kg", note: "Empty and rinsed", accent: "mint" },
-  { id: "metal", icon: "◫", label: "Selected metal", rate: "Rate at pickup", note: "Sorted by type", accent: "blue" },
-  { id: "ewaste", icon: "⌁", label: "Small e-waste", rate: "Free drop-off", note: "Devices and cables", accent: "lilac" },
+const rewards = [
+  { id: "load", icon: "₱", title: "Mobile load", meta: "Any local network", price: 200, value: "₱20" },
+  { id: "grocery", icon: "B", title: "Grocery voucher", meta: "Partner stores", price: 500, value: "₱50" },
+  { id: "bag", icon: "H", title: "HAKOT eco-bag", meta: "Reusable canvas bag", price: 800, value: "₱80" },
 ];
 
-const starterPickups: Pickup[] = [
-  {
-    id: "HK-240718",
-    material: "cardboard",
-    label: "Cardboard + PET bottles",
-    quantity: "2 medium sacks",
-    date: "Jul 26, 2026",
-    window: "8:00–11:00 AM",
-    location: "Palm Grove Residences · Lobby B",
-    status: "Assigned",
-  },
-  {
-    id: "HK-240602",
-    material: "ewaste",
-    label: "Small e-waste",
-    quantity: "1 tote bag",
-    date: "Jun 14, 2026",
-    window: "Completed 10:42 AM",
-    location: "Palm Grove Residences · Lobby B",
-    status: "Collected",
-    weight: "3.8 kg",
-    payout: "Donation",
-  },
+const initialTransactions: Transaction[] = [
+  { id: "t1", label: "PET pickup verified", points: 185, date: "Jul 19" },
+  { id: "t2", label: "Cardboard pickup verified", points: 95, date: "Jul 12" },
+  { id: "t3", label: "Mobile load redeemed", points: -200, date: "Jul 08" },
 ];
 
-const routeStops = [
-  { id: "B-01", name: "Lobby B collection point", meta: "12 bookings · 48–62 kg", status: "Ready", time: "8:00 AM" },
-  { id: "A-03", name: "Tower A guardhouse", meta: "8 bookings · 31–44 kg", status: "Next", time: "9:10 AM" },
-  { id: "C-02", name: "Clubhouse service bay", meta: "6 bookings · 18–25 kg", status: "Queued", time: "10:05 AM" },
-  { id: "J-01", name: "Green Loop Junkshop", meta: "Route transfer · all materials", status: "Transfer", time: "11:20 AM" },
-];
-
-const roleCopy: Record<Role, { eyebrow: string; title: string; description: string }> = {
-  resident: {
-    eyebrow: "Palm Grove Residences",
-    title: "Good afternoon, Mia.",
-    description: "Your next community pickup is open. Add your recyclables before Friday, 6:00 PM.",
-  },
-  collector: {
-    eyebrow: "Green Loop Collection Team",
-    title: "Saturday route is ready.",
-    description: "Four stops, 26 bookings, and an estimated 97–131 kg are locked for collection.",
-  },
-  operations: {
-    eyebrow: "HAKOT Operations · Quezon City pilot",
-    title: "Routes are on track.",
-    description: "One exception needs review before tomorrow’s collection cutoff.",
-  },
-};
-
-function formatDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
-  return new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric" }).format(date);
+function Mark({ children, tone = "" }: { children: React.ReactNode; tone?: string }) {
+  return <span className={`mark ${tone}`} aria-hidden="true">{children}</span>;
 }
 
-function Icon({ children }: { children: React.ReactNode }) {
-  return <span aria-hidden="true" className="ui-icon">{children}</span>;
+function Logo({ compact = false }: { compact?: boolean }) {
+  return <span className="logo"><span className="logo-mark">H</span>{!compact && <strong>HAKOT</strong>}</span>;
 }
 
-function StatusPill({ status }: { status: string }) {
-  const key = status.toLowerCase().replaceAll(" ", "-");
-  return <span className={`status status-${key}`}><span className="status-dot" />{status}</span>;
+function PesoValue({ points }: { points: number }) {
+  return <>{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(points / 10)}</>;
 }
 
 export function HakotApp() {
-  const [role, setRole] = useState<Role>("resident");
-  const [residentView, setResidentView] = useState<ResidentView>("home");
-  const [pickups, setPickups] = useState<Pickup[]>(starterPickups);
-  const [bookingOpen, setBookingOpen] = useState(false);
-  const [bookingStep, setBookingStep] = useState(1);
-  const [selectedMaterials, setSelectedMaterials] = useState<MaterialId[]>(["cardboard"]);
-  const [quantity, setQuantity] = useState("1–2 medium sacks");
-  const [pickupDate, setPickupDate] = useState("2026-07-26");
-  const [location, setLocation] = useState("Palm Grove Residences · Lobby B");
-  const [notes, setNotes] = useState("");
+  const [view, setView] = useState<MobileView>("home");
+  const [points, setPoints] = useState(1280);
+  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [imageUrl, setImageUrl] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [material, setMaterial] = useState<MaterialId>("pet");
+  const [estimate, setEstimate] = useState<Estimate | null>(null);
+  const [scanState, setScanState] = useState<"empty" | "ready" | "analyzing" | "done">("empty");
   const [toast, setToast] = useState("");
-  const [completedStops, setCompletedStops] = useState<string[]>([]);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("hakot-pickups");
+    const saved = window.localStorage.getItem("hakot-wallet-v2");
     if (saved) {
       try {
-        const storedPickups = JSON.parse(saved) as Pickup[];
-        queueMicrotask(() => setPickups(storedPickups));
-      } catch { /* Keep safe demo defaults. */ }
+        const parsed = JSON.parse(saved) as { points: number; transactions: Transaction[] };
+        queueMicrotask(() => { setPoints(parsed.points); setTransactions(parsed.transactions); });
+      } catch { /* keep demo defaults */ }
     }
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem("hakot-pickups", JSON.stringify(pickups));
-  }, [pickups]);
+    window.localStorage.setItem("hakot-wallet-v2", JSON.stringify({ points, transactions }));
+  }, [points, transactions]);
 
   useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(""), 3200);
+    const timer = window.setTimeout(() => setToast(""), 2800);
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const selectedLabels = useMemo(
-    () => materials.filter((material) => selectedMaterials.includes(material.id)).map((material) => material.label),
-    [selectedMaterials],
-  );
+  useEffect(() => () => { if (imageUrl.startsWith("blob:")) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
 
-  function switchRole(next: Role) {
-    setRole(next);
-    setShowNotifications(false);
-    if (next === "resident") setResidentView("home");
+  const monthBars = [42, 58, 44, 72, 63, 88, 70];
+  function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (imageUrl.startsWith("blob:")) URL.revokeObjectURL(imageUrl);
+    setImageUrl(URL.createObjectURL(file));
+    setFileName(file.name);
+    setEstimate(null);
+    setScanState("ready");
+    setView("scan");
+    setScanOpen(true);
   }
 
-  function openBooking(material?: MaterialId) {
-    if (material) setSelectedMaterials([material]);
-    setBookingStep(1);
-    setBookingOpen(true);
+  function analyzePhoto() {
+    setScanState("analyzing");
+    window.setTimeout(() => {
+      const base = Math.max(1.2, Math.min(6.8, ((fileName.length * 17) % 48) / 10 + 1.5));
+      const weight = Number(base.toFixed(1));
+      setEstimate({ material, weight, points: Math.round(weight * materials[material].rate) });
+      setScanState("done");
+    }, 900);
   }
 
-  function toggleMaterial(id: MaterialId) {
-    setSelectedMaterials((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  function submitEstimate() {
+    if (!estimate) return;
+    setToast("Pickup request sent for verification.");
+    setScanOpen(false);
+    setView("home");
   }
 
-  function submitBooking(event: FormEvent) {
-    event.preventDefault();
-    if (!selectedMaterials.length) return;
-    const newPickup: Pickup = {
-      id: `HK-${String(Date.now()).slice(-6)}`,
-      material: selectedMaterials[0],
-      label: selectedLabels.join(" + "),
-      quantity,
-      date: formatDate(pickupDate),
-      window: "8:00–11:00 AM",
-      location,
-      status: "Confirmed",
-    };
-    setPickups((current) => [newPickup, ...current]);
-    setBookingOpen(false);
-    setResidentView("pickups");
-    setToast("Pickup added to the community route.");
-    setNotes("");
+  function redeem(reward: (typeof rewards)[number]) {
+    if (points < reward.price) {
+      setToast(`You need ${reward.price - points} more points.`);
+      return;
+    }
+    setPoints((value) => value - reward.price);
+    setTransactions((items) => [{
+      id: String(Date.now()),
+      label: `${reward.title} redeemed`,
+      points: -reward.price,
+      date: "Today",
+    }, ...items]);
+    setToast(`${reward.title} added to your vouchers.`);
   }
-
-  function markStop(id: string) {
-    setCompletedStops((current) => current.includes(id) ? current : [...current, id]);
-    setToast("Stop recorded. Weight and payout proof saved.");
-  }
-
-  const copy = roleCopy[role];
 
   return (
-    <main className="app-shell">
-      <aside className="side-rail" aria-label="Primary navigation">
-        <button className="brand" onClick={() => switchRole("resident")} aria-label="HAKOT home">
-          <span className="brand-mark"><span>H</span></span>
-          <span className="brand-word">HAKOT</span>
-        </button>
-
-        <nav className="rail-nav">
-          <button className={role === "resident" ? "active" : ""} onClick={() => switchRole("resident")}>
-            <Icon>⌂</Icon><span>Resident</span>
-          </button>
-          <button className={role === "collector" ? "active" : ""} onClick={() => switchRole("collector")}>
-            <Icon>▱</Icon><span>Collector</span>
-          </button>
-          <button className={role === "operations" ? "active" : ""} onClick={() => switchRole("operations")}>
-            <Icon>▦</Icon><span>Operations</span>
-          </button>
-        </nav>
-
-        <div className="pilot-chip"><span className="live-dot" />QC pilot live</div>
-        <button className="profile-card" onClick={() => setToast("Profile settings are ready for backend integration.")}>
-          <span className="avatar">MM</span>
-          <span><strong>Mia M.</strong><small>Community member</small></span>
-          <span aria-hidden="true">›</span>
-        </button>
-      </aside>
-
-      <section className="app-content">
-        <header className="topbar">
-          <div className="mobile-brand"><span className="brand-mark small"><span>H</span></span><strong>HAKOT</strong></div>
-          <div className="role-switcher" aria-label="Switch demo role">
-            <button className={role === "resident" ? "active" : ""} onClick={() => switchRole("resident")}>Resident</button>
-            <button className={role === "collector" ? "active" : ""} onClick={() => switchRole("collector")}>Collector</button>
-            <button className={role === "operations" ? "active" : ""} onClick={() => switchRole("operations")}>Ops</button>
-          </div>
-          <div className="top-actions">
-            <button className="icon-button" aria-label="Open notifications" onClick={() => setShowNotifications((value) => !value)}>
-              <Icon>◌</Icon><span className="notification-dot" />
-            </button>
-            {role === "resident" && <button className="button primary compact" onClick={() => openBooking()}><Icon>＋</Icon>Book pickup</button>}
-          </div>
-          {showNotifications && (
-            <div className="notification-panel" role="status">
-              <strong>Pickup reminder</strong>
-              <p>Add or edit items before Friday at 6:00 PM.</p>
-              <small>12 minutes ago</small>
+    <main>
+      <section className="desktop-shell" aria-label="HAKOT operations dashboard">
+        <DesktopSidebar />
+        <div className="desktop-main">
+          <DesktopTopbar />
+          <div className="desktop-page">
+            <div className="desktop-heading">
+              <div><span className="eyebrow">Overview / Quezon City pilot</span><h1>Good morning, Bea.</h1><p>Here is today&apos;s collection and rewards activity.</p></div>
+              <button className="primary-button" onClick={() => { setScanOpen(true); setView("scan"); }}>Review scan <span>→</span></button>
             </div>
-          )}
-        </header>
 
-        <div className="page-wrap">
-          <section className="page-intro">
-            <div>
-              <span className="eyebrow">{copy.eyebrow}</span>
-              <h1>{copy.title}</h1>
-              <p>{copy.description}</p>
+            <div className="metric-grid">
+              <Metric label="Pending reviews" value="12" delta="+3 today" mark="S" tone="mint" />
+              <Metric label="Scheduled pickups" value="28" delta="4 routes" mark="T" tone="sky" />
+              <Metric label="Points issued" value="8,420" delta="+18.6%" mark="P" tone="lime" />
+              <Metric label="Wallet value" value="₱842" delta="This month" mark="₱" tone="sand" />
             </div>
-            <div className="trust-badge"><Icon>✓</Icon><span><strong>Verified pilot</strong><small>2 local partners</small></span></div>
-          </section>
 
-          {role === "resident" && (
-            <>
-              <div className="subnav" aria-label="Resident sections">
-                {(["home", "pickups", "impact"] as ResidentView[]).map((view) => (
-                  <button key={view} onClick={() => setResidentView(view)} className={residentView === view ? "active" : ""}>
-                    {view === "home" ? "Overview" : view === "pickups" ? "My pickups" : "My impact"}
-                  </button>
-                ))}
-              </div>
-              {residentView === "home" && <ResidentHome pickups={pickups} onBook={openBooking} onViewPickups={() => setResidentView("pickups")} />}
-              {residentView === "pickups" && <PickupList pickups={pickups} onBook={() => openBooking()} />}
-              {residentView === "impact" && <ImpactView pickups={pickups} />}
-            </>
-          )}
+            <div className="dashboard-grid">
+              <section className="card chart-card">
+                <CardHead title="Collection performance" meta="Last 7 days" />
+                <div className="chart-summary"><strong>486.8 <small>kg</small></strong><span>↗ 18.6% from last week</span></div>
+                <div className="bar-chart" aria-label="Daily collection chart">
+                  {monthBars.map((height, index) => <div key={index}><span style={{ height: `${height}%` }} /><small>{["M","T","W","T","F","S","S"][index]}</small></div>)}
+                </div>
+              </section>
 
-          {role === "collector" && <CollectorView completedStops={completedStops} onComplete={markStop} />}
-          {role === "operations" && <OperationsView onResolve={() => setToast("Exception assigned to Ana for review.")} />}
+              <section className="card review-card">
+                <CardHead title="Scan reviews" meta="View all" />
+                <div className="review-hero">
+                  <div className="scan-illustration"><span>⌗</span><i /></div>
+                  <div><span className="status-dot pending" />Needs verification<h2>PET bottles</h2><p>Estimated 3.6 kg · 162 pts</p><button onClick={() => setScanOpen(true)}>Review photo</button></div>
+                </div>
+                <div className="mini-review"><Mark tone="sand">C</Mark><span><strong>Cardboard bundle</strong><small>2.8 kg · 70 pts</small></span><b>Ready</b></div>
+              </section>
+
+              <section className="card mix-card">
+                <CardHead title="Material mix" meta="This month" />
+                <div className="donut"><div><strong>1.2t</strong><small>collected</small></div></div>
+                <ul><li><i className="pet" />PET <b>42%</b></li><li><i className="cardboard" />Cardboard <b>31%</b></li><li><i className="metal" />Metal <b>18%</b></li><li><i className="other" />Other <b>9%</b></li></ul>
+              </section>
+
+              <section className="card activity-card">
+                <CardHead title="Recent activity" meta="Today" />
+                <div className="activity-table">
+                  <div className="table-head"><span>Member</span><span>Material</span><span>Verified</span><span>Points</span><span>Status</span></div>
+                  {[
+                    ["Mia Santos","PET bottles","4.1 kg","+185","Credited"],
+                    ["Carlo Reyes","Cardboard","3.8 kg","+95","Credited"],
+                    ["Joy Lim","Aluminum","1.6 kg","+112","For review"],
+                    ["Anna Cruz","Glass","5.2 kg","+156","Scheduled"],
+                  ].map((row) => <div className="table-row" key={row[0]}><span><i>{row[0].split(" ").map(n => n[0]).join("")}</i><b>{row[0]}</b></span><span>{row[1]}</span><span>{row[2]}</span><strong>{row[3]}</strong><em className={row[4].toLowerCase().replace(" ","-")}>{row[4]}</em></div>)}
+                </div>
+              </section>
+
+              <section className="card rewards-card">
+                <CardHead title="Popular rewards" meta="Manage" />
+                {rewards.slice(0, 2).map((reward) => <div className="reward-row" key={reward.id}><Mark tone="mint">{reward.icon}</Mark><span><strong>{reward.title}</strong><small>{reward.meta}</small></span><b>{reward.price} pts</b></div>)}
+              </section>
+            </div>
+          </div>
         </div>
       </section>
 
-      <nav className="mobile-nav" aria-label="Mobile navigation">
-        <button className={role === "resident" ? "active" : ""} onClick={() => switchRole("resident")}><Icon>⌂</Icon><span>Resident</span></button>
-        <button className={role === "collector" ? "active" : ""} onClick={() => switchRole("collector")}><Icon>▱</Icon><span>Collector</span></button>
-        <button className="mobile-action" onClick={() => openBooking()} aria-label="Book pickup"><Icon>＋</Icon></button>
-        <button className={role === "operations" ? "active" : ""} onClick={() => switchRole("operations")}><Icon>▦</Icon><span>Ops</span></button>
-        <button onClick={() => setShowNotifications(true)}><Icon>◌</Icon><span>Alerts</span></button>
-      </nav>
+      <section className="mobile-app" aria-label="HAKOT resident mobile app">
+        <header className="mobile-header">
+          <Logo />
+          <button className="avatar-button" onClick={() => setView("profile")}>MS</button>
+        </header>
 
-      {bookingOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setBookingOpen(false)}>
-          <section className="booking-modal" role="dialog" aria-modal="true" aria-labelledby="booking-title">
-            <div className="modal-head">
-              <div><span className="eyebrow">Community route · Jul 26</span><h2 id="booking-title">Book a pickup</h2></div>
-              <button className="icon-button" aria-label="Close booking" onClick={() => setBookingOpen(false)}>×</button>
+        <div className="mobile-scroll">
+          {view === "home" && (
+            <>
+              <div className="mobile-greeting"><span>Magandang umaga, Mia!</span><h1>Turn your recyclables<br />into rewards.</h1></div>
+              <section className="wallet-hero">
+                <span>Available balance</span><strong>{points.toLocaleString()} <small>points</small></strong><p><PesoValue points={points} /> redeemable value</p>
+                <button onClick={() => setView("wallet")}>View wallet <span>→</span></button>
+                <div className="wallet-orbit one" /><div className="wallet-orbit two" />
+              </section>
+              <button className="scan-cta" onClick={() => fileRef.current?.click()}>
+                <span className="camera-mark">⌗</span><span><strong>Scan your recyclables</strong><small>Take a photo to estimate your points</small></span><b>→</b>
+              </button>
+              <section className="mobile-section">
+                <div className="section-title"><h2>How it works</h2></div>
+                <div className="how-grid"><div><Mark tone="mint">1</Mark><strong>Snap</strong><small>Take a clear photo</small></div><div><Mark tone="sky">2</Mark><strong>Verify</strong><small>We weigh at pickup</small></div><div><Mark tone="sand">3</Mark><strong>Redeem</strong><small>Use your points</small></div></div>
+              </section>
+              <section className="mobile-section">
+                <div className="section-title"><h2>Next pickup</h2><button>See details</button></div>
+                <article className="pickup-card"><div className="date-block"><b>26</b><span>JUL</span></div><div><strong>Community pickup</strong><p>Palm Grove · Lobby B</p><small>8:00 – 11:00 AM</small></div><em>Confirmed</em></article>
+              </section>
+            </>
+          )}
+
+          {view === "scan" && <MobileScan imageUrl={imageUrl} fileName={fileName} scanState={scanState} material={material} estimate={estimate} onChoose={() => fileRef.current?.click()} onMaterial={setMaterial} onAnalyze={analyzePhoto} onSubmit={submitEstimate} />}
+          {view === "wallet" && <MobileWallet points={points} transactions={transactions} />}
+          {view === "rewards" && <MobileRewards points={points} onRedeem={redeem} />}
+          {view === "profile" && <MobileProfile />}
+        </div>
+
+        <nav className="bottom-nav">
+          <button className={view === "home" ? "active" : ""} onClick={() => setView("home")}><span>⌂</span>Home</button>
+          <button className={view === "wallet" ? "active" : ""} onClick={() => setView("wallet")}><span>▣</span>Wallet</button>
+          <button className="scan-tab" onClick={() => fileRef.current?.click()}><span>⌗</span><small>Scan</small></button>
+          <button className={view === "rewards" ? "active" : ""} onClick={() => setView("rewards")}><span>◇</span>Rewards</button>
+          <button className={view === "profile" ? "active" : ""} onClick={() => setView("profile")}><span>○</span>Profile</button>
+        </nav>
+      </section>
+
+      <input ref={fileRef} className="sr-only" type="file" accept="image/*" capture="environment" onChange={choosePhoto} />
+
+      {scanOpen && (
+        <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setScanOpen(false)}>
+          <section className="scan-modal" role="dialog" aria-modal="true" aria-labelledby="scan-review-title">
+            <div className="modal-head"><div><span className="eyebrow">Photo estimate</span><h2 id="scan-review-title">Review recyclable scan</h2></div><button onClick={() => setScanOpen(false)}>×</button></div>
+            {imageUrl ? <img src={imageUrl} alt="Selected recyclables" className="modal-photo" /> : <div className="modal-placeholder"><span>⌗</span><strong>No photo selected</strong><button onClick={() => fileRef.current?.click()}>Choose photo</button></div>}
+            <div className="modal-fields">
+              <label>Material<select value={material} onChange={(event) => { setMaterial(event.target.value as MaterialId); setEstimate(null); setScanState("ready"); }}>{Object.entries(materials).map(([id, item]) => <option key={id} value={id}>{item.label}</option>)}</select></label>
+              <div><span>Estimate status</span><strong>{estimate ? `${estimate.weight} kg · ${estimate.points} pts` : "Waiting for photo"}</strong></div>
             </div>
-            <div className="stepper" aria-label={`Step ${bookingStep} of 3`}>
-              {[1, 2, 3].map((step) => <span key={step} className={bookingStep >= step ? "active" : ""}><b>{step}</b><small>{step === 1 ? "Materials" : step === 2 ? "Details" : "Review"}</small></span>)}
-            </div>
-            <form onSubmit={submitBooking}>
-              {bookingStep === 1 && (
-                <div className="modal-body">
-                  <h3>What are we collecting?</h3>
-                  <p className="muted">Choose all that apply. Final acceptance and value are confirmed after inspection and weighing.</p>
-                  <div className="material-select-grid">
-                    {materials.map((material) => (
-                      <button type="button" key={material.id} className={selectedMaterials.includes(material.id) ? "selected" : ""} onClick={() => toggleMaterial(material.id)}>
-                        <span className={`material-icon ${material.accent}`}>{material.icon}</span>
-                        <span><strong>{material.label}</strong><small>{material.note}</small></span>
-                        <span className="check">✓</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {bookingStep === 2 && (
-                <div className="modal-body form-grid">
-                  <label><span>Approximate amount</span><select value={quantity} onChange={(event) => setQuantity(event.target.value)}><option>1 small bag</option><option>1–2 medium sacks</option><option>3–5 medium sacks</option><option>Bulky item</option></select></label>
-                  <label><span>Pickup date</span><input type="date" value={pickupDate} min="2026-07-26" onChange={(event) => setPickupDate(event.target.value)} /></label>
-                  <label className="wide"><span>Handoff point</span><select value={location} onChange={(event) => setLocation(event.target.value)}><option>Palm Grove Residences · Lobby B</option><option>Palm Grove Residences · Tower A guardhouse</option><option>Palm Grove Residences · Clubhouse bay</option></select></label>
-                  <label className="wide"><span>Access notes <small>optional</small></span><textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Example: Ask the lobby guard for unit 8C items." /></label>
-                  <div className="info-note wide"><Icon>i</Icon><p>Leave materials at the selected handoff point between 7:30 and 8:00 AM. Keep paper dry and separate e-waste from other materials.</p></div>
-                </div>
-              )}
-              {bookingStep === 3 && (
-                <div className="modal-body">
-                  <div className="review-card">
-                    <div className="review-icon"><Icon>✓</Icon></div>
-                    <h3>Ready for the community route</h3>
-                    <p>Your request will be grouped with nearby bookings.</p>
-                    <dl><div><dt>Materials</dt><dd>{selectedLabels.join(", ")}</dd></div><div><dt>Amount</dt><dd>{quantity}</dd></div><div><dt>Date & window</dt><dd>{formatDate(pickupDate)} · 8:00–11:00 AM</dd></div><div><dt>Handoff</dt><dd>{location}</dd></div></dl>
-                  </div>
-                  <label className="consent"><input required type="checkbox" /><span>I understand that photos and listed rates are estimates. Actual acceptance, weight, and payout are confirmed at collection.</span></label>
-                </div>
-              )}
-              <div className="modal-actions">
-                {bookingStep > 1 ? <button type="button" className="button secondary" onClick={() => setBookingStep((step) => step - 1)}>Back</button> : <button type="button" className="button secondary" onClick={() => setBookingOpen(false)}>Cancel</button>}
-                {bookingStep < 3 ? <button type="button" className="button primary" disabled={bookingStep === 1 && !selectedMaterials.length} onClick={() => setBookingStep((step) => step + 1)}>Continue <span aria-hidden="true">→</span></button> : <button type="submit" className="button primary">Confirm pickup</button>}
-              </div>
-            </form>
+            <p className="verification-note">Photo results are estimates. Final weight and points are confirmed by a collector at pickup.</p>
+            <div className="modal-actions">{estimate ? <button className="primary-button" onClick={submitEstimate}>Add to pickup</button> : <button className="primary-button" disabled={!imageUrl || scanState === "analyzing"} onClick={analyzePhoto}>{scanState === "analyzing" ? "Estimating…" : "Estimate points"}</button>}</div>
           </section>
         </div>
       )}
 
-      {toast && <div className="toast" role="status"><span>✓</span>{toast}</div>}
+      {toast && <div className="toast"><span>✓</span>{toast}</div>}
     </main>
   );
 }
 
-function ResidentHome({ pickups, onBook, onViewPickups }: { pickups: Pickup[]; onBook: (material?: MaterialId) => void; onViewPickups: () => void }) {
-  const next = pickups.find((pickup) => pickup.status !== "Collected") ?? pickups[0];
-  return (
-    <div className="dashboard-grid">
-      <section className="next-pickup-card">
-        <div className="card-kicker"><span className="live-dot pale" />Next community pickup</div>
-        <div className="pickup-date-block"><span>JUL</span><strong>26</strong><small>SATURDAY</small></div>
-        <div className="pickup-copy"><h2>Dry recyclables & e-waste</h2><p>8:00–11:00 AM · Lobby B collection point</p><div className="route-meta"><span><Icon>◎</Icon>Green Loop Junkshop</span><span><Icon>◷</Icon>Cutoff in 3 days</span></div></div>
-        <button className="button light" onClick={() => onBook()}>Add my items <span>→</span></button>
-      </section>
-
-      <section className="metric-strip" aria-label="Community impact">
-        <div><span className="metric-icon"><Icon>♻</Icon></span><p><strong>186.4 kg</strong><small>community diverted</small></p></div>
-        <div><span className="metric-icon"><Icon>◇</Icon></span><p><strong>34</strong><small>participating homes</small></p></div>
-        <div><span className="metric-icon"><Icon>✓</Icon></span><p><strong>96%</strong><small>successful handoffs</small></p></div>
-      </section>
-
-      <section className="panel materials-panel">
-        <div className="panel-head"><div><span className="eyebrow">Prepare before you book</span><h2>What we collect</h2></div><button className="text-button" onClick={() => onBook()}>View full guide →</button></div>
-        <div className="material-grid">
-          {materials.map((material) => (
-            <button className="material-card" key={material.id} onClick={() => onBook(material.id)}>
-              <span className={`material-icon ${material.accent}`}>{material.icon}</span>
-              <span><strong>{material.label}</strong><small>{material.note}</small><em>{material.rate}</em></span><span className="card-arrow">↗</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel active-pickup-panel">
-        <div className="panel-head"><div><span className="eyebrow">In progress</span><h2>Your active pickup</h2></div><button className="text-button" onClick={onViewPickups}>All pickups →</button></div>
-        <div className="active-row"><span className="material-icon sand">{materials.find((item) => item.id === next.material)?.icon}</span><div><strong>{next.label}</strong><small>{next.quantity} · {next.id}</small></div><StatusPill status={next.status} /></div>
-        <div className="timeline"><span className="done"><b>✓</b><small>Booked</small></span><i /><span className="done"><b>✓</b><small>Route assigned</small></span><i /><span><b>3</b><small>Pickup</small></span><i /><span><b>4</b><small>Verified</small></span></div>
-        <div className="prep-note"><Icon>i</Icon><p><strong>Prepare by 7:30 AM</strong><span>Bundle cardboard and keep PET bottles in a separate sack.</span></p></div>
-      </section>
-
-      <section className="tip-card"><span className="tip-number">01</span><div><span className="eyebrow">HAKOT tip</span><h2>Keep it dry, keep its value.</h2><p>Wet cardboard is often rejected. Store it indoors and bundle it only on pickup day.</p></div></section>
-    </div>
-  );
+function DesktopSidebar() {
+  const nav = [["▦","Overview"],["⌗","Scan reviews"],["T","Pickups"],["○","Members"],["▣","Wallet & rewards"],["◇","Partners"],["↗","Analytics"]];
+  return <aside className="desktop-sidebar"><Logo /><nav>{nav.map(([icon,label], index) => <button key={label} className={index === 0 ? "active" : ""}><span>{icon}</span>{label}{label === "Scan reviews" && <b>12</b>}</button>)}</nav><div className="sidebar-card"><Mark tone="mint">♻</Mark><strong>1,248 kg</strong><p>kept out of landfill this month</p><span><i style={{ width: "72%" }} /></span></div><div className="user-card"><span>BL</span><div><strong>Bea Lim</strong><small>Operations admin</small></div><b>•••</b></div></aside>;
 }
 
-function PickupList({ pickups, onBook }: { pickups: Pickup[]; onBook: () => void }) {
-  return (
-    <section className="panel list-panel">
-      <div className="panel-head"><div><span className="eyebrow">Request history</span><h2>My pickups</h2></div><button className="button primary compact" onClick={onBook}>＋ New pickup</button></div>
-      <div className="pickup-list">
-        {pickups.map((pickup) => (
-          <article key={pickup.id} className="pickup-list-item">
-            <span className={`material-icon ${materials.find((item) => item.id === pickup.material)?.accent}`}>{materials.find((item) => item.id === pickup.material)?.icon}</span>
-            <div className="pickup-main"><div><strong>{pickup.label}</strong><StatusPill status={pickup.status} /></div><p>{pickup.date} · {pickup.window}</p><small>{pickup.location} · {pickup.quantity}</small></div>
-            <div className="pickup-proof"><small>{pickup.id}</small>{pickup.weight && <strong>{pickup.weight}</strong>}{pickup.payout && <span>{pickup.payout}</span>}<button aria-label={`View ${pickup.id}`}>›</button></div>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
+function DesktopTopbar() {
+  return <header className="desktop-topbar"><div className="search"><span>⌕</span><input aria-label="Search dashboard" placeholder="Search members, scans, pickups…" /></div><div className="top-actions"><button>?</button><button>◌<i /></button><div className="top-profile"><span>BL</span><div><strong>Bea Lim</strong><small>Administrator</small></div><b>⌄</b></div></div></header>;
 }
 
-function ImpactView({ pickups }: { pickups: Pickup[] }) {
-  const completed = pickups.filter((pickup) => pickup.status === "Collected").length;
-  return (
-    <div className="impact-layout">
-      <section className="impact-hero"><span className="eyebrow">Verified personal record</span><h2>{completed ? "3.8" : "0"}<small> kg</small></h2><p>Materials transferred to a declared downstream partner.</p><div className="impact-ring"><span>{Math.min(100, completed * 25)}%</span><small>to 15 kg goal</small></div></section>
-      <section className="panel"><div className="panel-head"><div><span className="eyebrow">How records work</span><h2>Proof before points</h2></div></div><div className="proof-steps"><div><b>1</b><span><strong>Collected</strong><small>Partner records actual accepted weight.</small></span></div><div><b>2</b><span><strong>Transferred</strong><small>Route is handed to the declared receiver.</small></span></div><div><b>3</b><span><strong>Verified</strong><small>Receipt or receiving evidence closes the batch.</small></span></div></div></section>
-      <section className="panel wide-panel"><div className="panel-head"><div><span className="eyebrow">Community comparison</span><h2>Palm Grove this quarter</h2></div></div><div className="bar-list"><div><span>Cardboard</span><i><b style={{ width: "82%" }} /></i><strong>92.1 kg</strong></div><div><span>PET bottles</span><i><b style={{ width: "61%" }} /></i><strong>54.6 kg</strong></div><div><span>Metal</span><i><b style={{ width: "38%" }} /></i><strong>31.7 kg</strong></div><div><span>E-waste</span><i><b style={{ width: "16%" }} /></i><strong>8.0 kg</strong></div></div></section>
-    </div>
-  );
+function Metric({ label, value, delta, mark, tone }: { label: string; value: string; delta: string; mark: string; tone: string }) {
+  return <div className="metric-card"><Mark tone={tone}>{mark}</Mark><div><span>{label}</span><strong>{value}</strong><small>{delta}</small></div><b>↗</b></div>;
 }
 
-function CollectorView({ completedStops, onComplete }: { completedStops: string[]; onComplete: (id: string) => void }) {
-  return (
-    <div className="collector-layout">
-      <section className="route-summary-card"><div><span className="eyebrow">Route PG-0726 · Locked</span><h2>Palm Grove Saturday route</h2><p>4 stops · 8:00–11:45 AM · Dry recyclables + e-waste</p></div><div className="route-stat"><strong>{completedStops.length}/4</strong><small>stops closed</small></div><button className="button light" onClick={() => document.getElementById("route-manifest")?.scrollIntoView({ behavior: "smooth" })}>Open manifest ↓</button></section>
-      <section className="metric-strip collector-metrics"><div><span className="metric-icon"><Icon>▱</Icon></span><p><strong>97–131 kg</strong><small>expected volume</small></p></div><div><span className="metric-icon"><Icon>◎</Icon></span><p><strong>6.8 km</strong><small>planned route</small></p></div><div><span className="metric-icon"><Icon>◷</Icon></span><p><strong>3h 45m</strong><small>route window</small></p></div></section>
-      <section className="panel route-panel" id="route-manifest"><div className="panel-head"><div><span className="eyebrow">Sequenced stops</span><h2>Route manifest</h2></div><StatusPill status="Accepted" /></div><div className="route-list">{routeStops.map((stop, index) => { const complete = completedStops.includes(stop.id); return <article key={stop.id} className={complete ? "complete" : ""}><div className="route-sequence"><span>{complete ? "✓" : index + 1}</span><i /></div><div className="route-stop-copy"><small>{stop.time} · Stop {stop.id}</small><strong>{stop.name}</strong><p>{stop.meta}</p></div><div className="route-stop-action">{complete ? <StatusPill status="Collected" /> : <><StatusPill status={stop.status} /><button className="button secondary compact" onClick={() => onComplete(stop.id)}>Record stop</button></>}</div></article>; })}</div></section>
-      <section className="panel safety-panel"><span className="safety-icon">!</span><div><span className="eyebrow">Route-day safety</span><h2>Do not load unknown or unsafe items.</h2><p>Reject leaking batteries, chemicals, medical waste, pressurized containers, and unlisted materials. Record a reason and notify operations.</p></div><button className="text-button">Open safety guide →</button></section>
-    </div>
-  );
+function CardHead({ title, meta }: { title: string; meta: string }) {
+  return <div className="card-head"><h2>{title}</h2><button>{meta} <span>⌄</span></button></div>;
 }
 
-function OperationsView({ onResolve }: { onResolve: () => void }) {
-  return (
-    <div className="operations-layout">
-      <section className="ops-metrics">
-        <div><span>Active routes</span><strong>3</strong><small><b>2</b> locked · 1 building</small></div>
-        <div><span>Expected volume</span><strong>284<em> kg</em></strong><small>Across 4 partner sites</small></div>
-        <div><span>Successful stops</span><strong>96.2<em>%</em></strong><small><b>+2.4%</b> from last month</small></div>
-        <div className="attention"><span>Needs attention</span><strong>1</strong><small>Weight evidence review</small></div>
-      </section>
-      <section className="panel ops-routes"><div className="panel-head"><div><span className="eyebrow">Saturday, July 26</span><h2>Route control board</h2></div><button className="button primary compact">＋ Build route</button></div><div className="ops-table" role="table" aria-label="Active routes"><div className="ops-table-head" role="row"><span>Route</span><span>Partner</span><span>Bookings</span><span>Volume</span><span>Status</span><span /></div>{[
-        ["PG-0726", "Green Loop", "26", "97–131 kg", "Locked"],
-        ["SC-0726", "JRM Recyclers", "18", "72–94 kg", "Building"],
-        ["EV-0727", "ReCircuit PH", "11", "E-waste", "Review"],
-      ].map((row) => <div className="ops-table-row" role="row" key={row[0]}>{row.map((cell, index) => index === 4 ? <StatusPill key={cell} status={cell} /> : <span key={cell}>{cell}</span>)}<button aria-label={`Open route ${row[0]}`}>›</button></div>)}</div></section>
-      <section className="panel exception-panel"><div className="panel-head"><div><span className="eyebrow">Exception inbox</span><h2>1 item needs review</h2></div><button className="text-button">View all →</button></div><article><span className="exception-icon">!</span><div><div><strong>Weight evidence does not match entry</strong><StatusPill status="Needs review" /></div><p>Booking HK-240514 · JRM Recyclers entered 12.4 kg; scale photo appears to show 10.4 kg.</p><small>Reported 18 minutes ago · Route SC-0726</small></div><button className="button secondary compact" onClick={onResolve}>Assign review</button></article></section>
-      <section className="panel rate-panel"><div className="panel-head"><div><span className="eyebrow">Effective Jul 20, 2026</span><h2>Material rate board</h2></div><button className="text-button">Manage rates →</button></div><div className="rate-list">{materials.slice(0,3).map((material) => <div key={material.id}><span className={`material-icon ${material.accent}`}>{material.icon}</span><span><strong>{material.label}</strong><small>{material.note}</small></span><b>{material.rate}</b></div>)}</div></section>
-    </div>
-  );
+function MobileScan({ imageUrl, fileName, scanState, material, estimate, onChoose, onMaterial, onAnalyze, onSubmit }: { imageUrl: string; fileName: string; scanState: string; material: MaterialId; estimate: Estimate | null; onChoose: () => void; onMaterial: (value: MaterialId) => void; onAnalyze: () => void; onSubmit: () => void }) {
+  const info = estimate ? materials[estimate.material] : materials[material];
+  return <div className="mobile-page scan-page"><div className="mobile-page-head"><span>Photo estimate</span><h1>Scan recyclables</h1><p>Take one clear photo of sorted, clean materials.</p></div>
+    <button className={`photo-zone ${imageUrl ? "has-photo" : ""}`} onClick={onChoose}>{imageUrl ? <img src={imageUrl} alt="Your selected recyclables" /> : <><span>⌗</span><strong>Open camera</strong><small>or choose from your gallery</small></>} {imageUrl && <em>Change photo</em>}</button>
+    {fileName && <small className="file-name">{fileName}</small>}
+    <section className="material-picker"><h2>What is in the photo?</h2><div>{(Object.entries(materials) as [MaterialId, typeof materials.pet][]).map(([id,item]) => <button key={id} className={material === id ? "active" : ""} onClick={() => onMaterial(id)}><Mark tone={item.color}>{item.mark}</Mark>{item.label}</button>)}</div></section>
+    {estimate && <section className="estimate-card"><div className="estimate-title"><Mark tone="mint">✓</Mark><span><strong>Estimated value</strong><small>Pending pickup verification</small></span></div><div className="estimate-values"><div><span>Material</span><strong>{info.label}</strong></div><div><span>Est. weight</span><strong>{estimate.weight} kg</strong></div><div><span>Est. points</span><strong>{estimate.points} pts</strong></div><div><span>PHP value</span><strong><PesoValue points={estimate.points} /></strong></div></div><p>Rate: {info.rate} points/kg. Final points may change after weighing.</p></section>}
+    {estimate ? <button className="mobile-primary" onClick={onSubmit}>Add to pickup request</button> : <button className="mobile-primary" disabled={!imageUrl || scanState === "analyzing"} onClick={onAnalyze}>{scanState === "analyzing" ? "Checking photo…" : "Estimate my points"}</button>}
+  </div>;
+}
+
+function MobileWallet({ points, transactions }: { points: number; transactions: Transaction[] }) {
+  return <div className="mobile-page"><div className="mobile-page-head"><span>Your balance</span><h1>Wallet</h1><p>Verified pickup points, all in one place.</p></div><section className="wallet-detail"><span>Available to redeem</span><strong>{points.toLocaleString()} <small>pts</small></strong><p><PesoValue points={points} /> wallet value</p><div><button>Redeem points</button><button>How it works</button></div></section><div className="conversion-note"><Mark tone="mint">₱</Mark><span><strong>10 points = ₱1 reward value</strong><small>Use points on available partner rewards. Points are not direct cash.</small></span></div><section className="transaction-list"><h2>Transactions</h2>{transactions.map((item) => <article key={item.id}><Mark tone={item.points > 0 ? "mint" : "sand"}>{item.points > 0 ? "+" : "−"}</Mark><span><strong>{item.label}</strong><small>{item.date}</small></span><b className={item.points > 0 ? "positive" : ""}>{item.points > 0 ? "+" : ""}{item.points} pts</b></article>)}</section></div>;
+}
+
+function MobileRewards({ points, onRedeem }: { points: number; onRedeem: (reward: (typeof rewards)[number]) => void }) {
+  return <div className="mobile-page"><div className="mobile-page-head"><span>{points.toLocaleString()} points available</span><h1>Rewards</h1><p>Use verified points at HAKOT partner stores.</p></div><div className="reward-filter"><button className="active">All</button><button>Load</button><button>Vouchers</button><button>Products</button></div><section className="reward-grid">{rewards.map((reward) => <article key={reward.id}><div className={`reward-art ${reward.id}`}><span>{reward.icon}</span><b>{reward.value}</b></div><h2>{reward.title}</h2><p>{reward.meta}</p><div><strong>{reward.price} pts</strong><button disabled={points < reward.price} onClick={() => onRedeem(reward)}>Redeem</button></div></article>)}</section><p className="reward-disclaimer">Rewards are demo offers for this prototype. Partner availability and terms will appear before confirmation.</p></div>;
+}
+
+function MobileProfile() {
+  return <div className="mobile-page"><div className="profile-hero"><span>MS</span><h1>Mia Santos</h1><p>Palm Grove Residences · Member since 2026</p><div><b>18.4 kg<small>recycled</small></b><b>7<small>pickups</small></b><b>580<small>pts earned</small></b></div></div><section className="profile-menu">{["Pickup addresses","My vouchers","Notification settings","Help center","Terms & privacy"].map((label, index) => <button key={label}><Mark tone={index % 2 ? "sand" : "mint"}>{["⌖","◇","◌","?","i"][index]}</Mark><span>{label}</span><b>›</b></button>)}</section></div>;
 }

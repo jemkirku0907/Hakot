@@ -23,7 +23,7 @@ test("server-renders the HAKOT application shell", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
-test("includes the three operational roles and booking workflow", async () => {
+test("includes the responsive photo, wallet, and reward workflows", async () => {
   const [app, css, page, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/HakotApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -31,13 +31,16 @@ test("includes the three operational roles and booking workflow", async () => {
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
-  assert.match(app, /type Role = "resident" \| "collector" \| "operations"/);
-  assert.match(app, /Book a pickup/);
-  assert.match(app, /Route manifest/);
-  assert.match(app, /Exception inbox/);
-  assert.match(app, /localStorage\.setItem\("hakot-pickups"/);
+  assert.match(app, /type MobileView = "home" \| "scan" \| "wallet" \| "rewards" \| "profile"/);
+  assert.match(app, /accept="image\/\*"/);
+  assert.match(app, /capture="environment"/);
+  assert.match(app, /Estimate my points/);
+  assert.match(app, /10 points = ₱1 reward value/);
+  assert.match(app, /localStorage\.setItem\("hakot-wallet-v2"/);
   assert.match(app, /serviceWorker\.register\("\/sw\.js"/);
   assert.match(css, /@media \(max-width: 760px\)/);
+  assert.match(css, /\.desktop-shell/);
+  assert.match(css, /\.mobile-app/);
   assert.match(css, /prefers-reduced-motion/);
   assert.doesNotMatch(page, /SkeletonPreview|codex-preview/);
   assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
