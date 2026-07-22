@@ -1,0 +1,11 @@
+{
+  "name": "HAKOT - Community Recycling Pickup",
+  "short_name": "HAKOT",
+  "description": "Schedule neighborhood recycling pickups and track collection proof.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f4ed",
+  "theme_color": "#12372a",
+  "lang": "en-PH",
+  "categories": ["utilities", "lifestyle", "productivity"]
+}
