@@ -34,6 +34,9 @@ test("includes the responsive photo, wallet, and reward workflows", async () => 
   assert.match(app, /Your trash/);
   assert.match(app, /Try the live demo/);
   assert.match(app, /How BasuCash works/);
+  assert.match(app, /cash-wallet/);
+  assert.match(app, /Recent activity/);
+  assert.match(app, /Snap[\s\S]*Verify[\s\S]*Earn/);
   assert.match(app, /localStorage\.setItem\("basucash-wallet-v1"/);
   assert.match(app, /serviceWorker\.register\("\/sw\.js"/);
   assert.match(css, /@media \(max-width: 760px\)/);
@@ -41,6 +44,7 @@ test("includes the responsive photo, wallet, and reward workflows", async () => 
   assert.match(css, /\.site-hero/);
   assert.match(css, /\.desktop-demo/);
   assert.match(css, /\.mobile-app/);
+  assert.match(css, /\.cash-wallet/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /family=Poppins/);
   assert.doesNotMatch(css, /DM\+Sans|Manrope/);

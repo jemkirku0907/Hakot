@@ -215,7 +215,24 @@ function ResidentView(props: ResidentProps) {
   if (view === "wallet") return <MobileWallet points={points} transactions={transactions} />;
   if (view === "rewards") return <MobileRewards points={points} onRedeem={onRedeem} />;
   if (view === "profile") return <MobileProfile />;
-  return <><div className="mobile-greeting"><span>Magandang umaga, Mia!</span><h1>Turn your recyclables<br />into rewards.</h1></div><section className="wallet-hero"><span>Available balance</span><strong>{points.toLocaleString()} <small>points</small></strong><p><PesoValue points={points} /> redeemable value</p><button onClick={() => onView("wallet")}>View wallet <span>→</span></button><div className="wallet-orbit one" /><div className="wallet-orbit two" /></section><button className="scan-cta" onClick={onChoose}><span className="camera-mark">⌗</span><span><strong>Scan your recyclables</strong><small>Take a photo to estimate your points</small></span><b>→</b></button><section className="mobile-section"><div className="section-title"><h2>How it works</h2></div><div className="how-grid"><div><Mark tone="mint">1</Mark><strong>Snap</strong><small>Take a clear photo</small></div><div><Mark tone="sky">2</Mark><strong>Verify</strong><small>We weigh at pickup</small></div><div><Mark tone="sand">3</Mark><strong>Redeem</strong><small>Use your points</small></div></div></section><section className="mobile-section"><div className="section-title"><h2>Next pickup</h2><button>See details</button></div><article className="pickup-card"><div className="date-block"><b>26</b><span>JUL</span></div><div><strong>Community pickup</strong><p>Palm Grove · Lobby B</p><small>8:00 – 11:00 AM</small></div><em>Confirmed</em></article></section></>;
+  return <div className="cash-home">
+    <section className="cash-wallet" aria-label="Wallet balance">
+      <span>Wallet Balance</span>
+      <strong><PesoValue points={points} /></strong>
+      <small>{points.toLocaleString()} points available</small>
+      <div className="cash-leaf leaf-one" /><div className="cash-leaf leaf-two" /><div className="cash-stem" />
+    </section>
+    <section className="cash-actions" aria-label="Quick actions">
+      <button onClick={onChoose}><Mark tone="mint">⌗</Mark><strong>Snap</strong><small>Take a photo</small></button>
+      <button onClick={() => onView("wallet")}><Mark tone="mint">✓</Mark><strong>Verify</strong><small>Track pickups</small></button>
+      <button onClick={() => onView("rewards")}><Mark tone="mint">₱</Mark><strong>Earn</strong><small>Use rewards</small></button>
+    </section>
+    <section className="cash-transactions transaction-list">
+      <div className="cash-section-head"><div><span>Recent activity</span><h2>Transactions</h2></div><button onClick={() => onView("wallet")}>View all</button></div>
+      {transactions.map((item, index) => <article key={item.id}><Mark tone={item.points > 0 ? "mint" : "sand"}>{item.points > 0 ? ["P","C","A"][index] ?? "+" : "₱"}</Mark><span><strong>{item.label.replace(" verified", "")}</strong><small>{item.date} · {item.points > 0 ? "Verified pickup" : "Reward redeemed"}</small></span><b className={item.points > 0 ? "positive" : ""}>{item.points > 0 ? "+" : ""}{item.points} pts</b></article>)}
+    </section>
+    <button className="cash-scan-button" onClick={onChoose}><span>⌗</span> Scan recyclables</button>
+  </div>;
 }
 
 function MobileNav({ view, onView, onScan }: { view: MobileView; onView: (view: MobileView) => void; onScan: () => void }) {
