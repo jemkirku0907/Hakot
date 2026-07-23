@@ -53,7 +53,11 @@ test("includes the responsive photo, earnings, map, and impact workflows", async
   assert.match(nearby, /navigator\.geolocation\.getCurrentPosition/);
   assert.match(nearby, /tile\.openstreetmap\.org/);
   assert.match(nearby, /Directions/);
-  assert.match(nearby, /Prototype locations only/);
+  assert.match(nearby, /basucash-community-shops-v1/);
+  assert.match(nearby, /Add a small local junkshop/);
+  assert.match(nearby, /Search Google Maps/);
+  assert.match(nearby, /Community reported · Not yet verified/);
+  assert.match(nearby, /Report incorrect or closed listing/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /family=Poppins/);
   assert.doesNotMatch(css, /DM\+Sans|Manrope/);
