@@ -1,7 +1,7 @@
 {
-  "name": "BasuCash - Community Recycling Rewards",
+  "name": "BasuCash - Recycling Value Guide",
   "short_name": "BasuCash",
-  "description": "Snap recyclables, earn verified points, and redeem useful local rewards.",
+  "description": "Check recyclable value, find nearby junkshops, and track cash earned from recycling.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f6f4ed",

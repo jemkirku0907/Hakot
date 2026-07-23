@@ -92,7 +92,7 @@ export default function NearbyJunkshops() {
   }
 
   return <div className="nearby-page">
-    <header className="nearby-head"><span>Verified drop-off partners</span><h1>Nearby junkshops</h1><p>Find a BasuCash partner that accepts your sorted recyclables.</p></header>
+    <header className="nearby-head"><span>Sample public listings</span><h1>Nearby junkshops</h1><p>Explore possible recycling locations. Contact the shop first to confirm materials and today&apos;s price.</p></header>
     <div className="partner-map" ref={mapElement} aria-label="Map of nearby recycling partners" />
     <div className="map-location-row">
       <button onClick={useMyLocation} disabled={locationState === "loading"}><span>⌖</span>{locationState === "loading" ? "Finding you…" : location ? "Location updated" : "Use my location"}</button>
@@ -109,10 +109,10 @@ export default function NearbyJunkshops() {
           </button>
           <div className="material-tags">{partner.materials.map((material) => <span key={material}>{material}</span>)}</div>
           {active && <div className="partner-actions"><button onClick={() => setConfirmedId(partner.id)}>{confirmedId === partner.id ? "Drop-off selected ✓" : "Choose drop-off"}</button><a href={`https://www.google.com/maps/dir/?api=1&destination=${partner.lat},${partner.lng}`} target="_blank" rel="noreferrer">Directions ↗</a></div>}
-          {confirmedId === partner.id && <p className="partner-confirmation">Bring sorted recyclables and show your BasuCash QR at weighing. Final points are credited after verification.</p>}
+          {confirmedId === partner.id && <p className="partner-confirmation">Bring clean, sorted recyclables. Keep the receipt or photograph the scale, then record the cash the junkshop paid you.</p>}
         </article>;
       })}
     </section>
-    <p className="partner-note">Prototype locations only. Production partners must be verified before appearing in BasuCash.</p>
+    <p className="partner-note">Prototype locations only—not BasuCash partners. Real listings must be checked before launch.</p>
   </div>;
 }

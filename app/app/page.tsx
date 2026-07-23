@@ -14,12 +14,12 @@ export default function ResidentAppPage() {
       <aside className="app-route-copy">
         <a href="/" className="app-route-back">← Back to website</a>
         <span className="site-kicker">BasuCash resident app</span>
-        <h1>Snap. Verify.<br />Earn rewards.</h1>
-        <p>Use the working app demo to scan recyclables, check estimated points, view your wallet, and explore rewards.</p>
+        <h1>Check. Sell.<br />Record.</h1>
+        <p>Use the working app demo to check possible junkshop value, find nearby buyers, and track your cash earnings and EcoPoints.</p>
         <div>
           <span><b>1</b>Take a photo</span>
-          <span><b>2</b>See estimated points</span>
-          <span><b>3</b>Verify at pickup</span>
+          <span><b>2</b>Check the possible range</span>
+          <span><b>3</b>Sell and record</span>
         </div>
       </aside>
       <section className="app-route-device" aria-label="BasuCash mobile application">
